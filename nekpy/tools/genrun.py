@@ -10,9 +10,9 @@ from ..utils import Struct
 
 mypath = (realpath(__file__))[:-9]
 
-#with open(join(mypath, "default.json"), "r") as f:
-#    default_config = json.load(f)
-default_config = json.loads(resource_string("nekpy.tools", "default.json").decode())
+with open(join(mypath, "default.json"), "r") as f:
+    default_config = json.load(f)
+#default_config = json.loads(resource_string("nekpy.tools", "default.json").decode())
 
 with open(join(mypath, "template.SIZE"), "r") as f:
     size_template = f.read()
@@ -25,6 +25,23 @@ with open(join(mypath, "template.rea"), "r") as f:
 
 with open(join(mypath, "template.box"), "r") as f:
     box_template = f.read()
+
+rea_legacy = """{}
+  ***** CURVED SIDE DATA *****
+           0 Curved sides follow IEDGE,IEL,CURVE(I),I=1,5, CCURVE
+  ***** BOUNDARY CONDITIONS *****
+  ***** FLUID   BOUNDARY CONDITIONS *****
+{}
+  ***** THERMAL BOUNDARY CONDITIONS *****
+{}"""
+
+rea_new = """{elements_total:11d}  3 {elements_total:11d}           NEL,NDIM,NELV
+{root_mesh[0]: E} {extent_mesh[0]: E} {shape_mesh[0]}
+{root_mesh[1]: E} {extent_mesh[1]: E} {shape_mesh[1]}
+{root_mesh[2]: E} {extent_mesh[2]: E} {shape_mesh[2]}
+{left_bound:3s} {right_bound:3s} {front_bound:3s} {back_bound:3s} {bottom_bound:3s} {top_bound:3s}
+{left_boundv:3s} {right_boundv:3s} {front_boundv:3s} {back_boundv:3s} {bottom_boundv:3s} {top_boundv:3s}
+ **TAIL OPTS**"""
 
 def genrun(name, config_in, tusr, 
         do_map=False, 
@@ -77,7 +94,6 @@ def genrun(name, config_in, tusr,
     if c.bottom_bound == 'P':
         c.bottom_boundv = 'P'
 
-
     if legacy:
         # Create a mesh object with a single box
         msh = Mesh(c.root_mesh, c.extent_mesh, c.shape_mesh,
@@ -96,7 +112,7 @@ def genrun(name, config_in, tusr,
         thermal_boundaries = fluid_boundaries.replace('SYM', 'I  ').replace('W  ', 'I  ')
 
         # Assemble the bits of the rea file together
-        mesh_rea = "{}\n  ***** CURVED SIDE DATA *****\n           0 Curved sides follow IEDGE,IEL,CURVE(I),I=1,5, CCURVE\n  ***** BOUNDARY CONDITIONS *****\n  ***** FLUID   BOUNDARY CONDITIONS *****\n{}\n  ***** THERMAL BOUNDARY CONDITIONS *****\n{}".format(mesh_data, fluid_boundaries, thermal_boundaries)
+        mesh_rea = rea_legacy.format(mesh_data, fluid_boundaries, thermal_boundaries)
 
         # map the mesh, targeting c.procs ranks
         msh.set_map(c.procs)
@@ -105,13 +121,7 @@ def genrun(name, config_in, tusr,
  
     else:
         # Assemble the bits of the rea file together
-        mesh_rea = """{elements_total:11d}  3 {elements_total:11d}           NEL,NDIM,NELV
-{root_mesh[0]: E} {extent_mesh[0]: E} {shape_mesh[0]}
-{root_mesh[1]: E} {extent_mesh[1]: E} {shape_mesh[1]}
-{root_mesh[2]: E} {extent_mesh[2]: E} {shape_mesh[2]}
-{left_bound:3s} {right_bound:3s} {front_bound:3s} {back_bound:3s} {bottom_bound:3s} {top_bound:3s}
-{left_boundv:3s} {right_boundv:3s} {front_boundv:3s} {back_boundv:3s} {bottom_boundv:3s} {top_boundv:3s}
- **TAIL OPTS**""".format(**c._attrs)
+        mesh_rea = rea_new.format(**c._attrs)
 
     # writes the current variable scope to the configuration
     config = c._attrs

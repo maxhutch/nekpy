@@ -1,21 +1,23 @@
 def factor(number):
-  factors = []
-  n = int(number)
-  test = 2
-  while n >= test:
-    if int((n/test))*test == n:
-      n /= test
-      factors.insert(0,test)
-    else:
-      test += 1
-
-  if n != 1:
-    print("Something is up: ", number, factors)
-
-  return factors
+    """Factor number, return list of factors"""
+    factors = []
+    n = int(number)
+    test = 2
+    while n >= test:
+        if int((n/test))*test == n:
+            n /= test
+            factors.insert(0,test)
+        else:
+            test += 1
+ 
+    if n != 1:
+        print("Something is up: ", number, factors)
+ 
+    return factors
 
 def get_ind(ix, iy, iz, n):
-  return int(1 + (ix%n[0]) + (iy%n[1]) * n[0] + (iz%n[2]) * n[0] * n[1])
+    """Compute 1-based index of element corner"""
+    return int(1 + (ix%n[0]) + (iy%n[1]) * n[0] + (iz%n[2]) * n[0] * n[1])
 
 def uniform_profile(ind, num, start, end):
     """Return uniformly spaced mesh corners"""
@@ -23,6 +25,7 @@ def uniform_profile(ind, num, start, end):
     return start + ind * delta, delta
 
 def pick_profile(prof):
+    """Pick 1D profile type"""
     if prof == "uniform":
         return uniform_profile
     return None
@@ -33,7 +36,7 @@ class Mesh:
                profile_x = 'uniform',
                profile_y = 'uniform',
                profile_z = 'uniform'):
-
+    """Store data in an object"""
     import numpy as np
     self.root = np.array(root, dtype=np.float64)
     self.corner = np.array(corner, dtype=np.float64)
@@ -54,6 +57,7 @@ class Mesh:
     return
 
   def generate_elements(self):
+    """Generate list of element corners for the rea file"""
     import numpy as np
     self.elements = np.zeros((np.prod(self.n), 24), dtype=np.float64)  
     e_root = np.array([0.,0.,0.], dtype=np.float64)
@@ -100,6 +104,7 @@ class Mesh:
     return
 
   def generate_faces(self):
+    """Generate list of element faces for the rea file"""
     import numpy as np
     self.faces = np.zeros((np.prod(self.n),6, 2))
     self.element_bounds = []
@@ -157,6 +162,7 @@ class Mesh:
         self.faces[e,5,1] = 1 + ix + iy * self.n[0] + (iz+1) * self.n[0]*self.n[1]      
 
   def get_mesh_data(self):
+    """Format element corners for the rea file"""
     import numpy as np
     letters = [chr(97+i) for i in range(26)] + [chr(65+i) for i in range(26)]
     mesh = " {:11d}  {:d} {:11d}           NEL,NDIM,NELV".format(np.prod(self.n), 3, np.prod(self.n))
@@ -174,6 +180,7 @@ class Mesh:
     return mesh
 
   def get_fluid_boundaries(self):
+    """Format element faces for rea file"""
     fluid_boundary = ""
     opposite_face = [3, 4, 1, 2, 6, 5]
     for e in range(self.elements.shape[0]):
@@ -183,6 +190,7 @@ class Mesh:
     return fluid_boundary[:-1]
 
   def set_map(self, target):
+    """Generate element <-> process mapping for <target> mpi ranks"""
     import numpy as np
 
     tfac = factor(target)
@@ -270,6 +278,7 @@ class Mesh:
     return
 
   def get_map(self):
+    """Format element <-> process mapping for map file"""
     import numpy as np
     map_data = "{:d} 0 {:d} {:d} {:d} 0 0\n".format(self.elements.shape[0], 
                                              self.n[0], self.n[1], self.n[2])
